@@ -47,13 +47,11 @@ node[:deploy].each do |application, deploy|
 			variables({
 						  :redis =>  node[:sidekiq][application]['redis'] || {}
 					  })
-
-			# create a link to the shared sidekiq.yml file
-			link "#{app_dir}/config/sidekiq.yml" do
-				to shared_sidekiq_config_file
-				owner user
-				group group
-			end
+		end
+		link "#{app_dir}/config/sidekiq.yml" do
+			to shared_sidekiq_config_file
+			owner user
+			group group
 		end
 
 		workers = node[:sidekiq][application].to_hash.reject {|k,v| k.to_s =~ /restart_command|syslog/ }
