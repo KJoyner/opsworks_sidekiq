@@ -37,7 +37,7 @@ node[:deploy].each do |application, deploy|
 		app_shared_config_dir = "#{app_shared_dir}/config"
 
 		shared_sidekiq_config_file = "#{app_shared_config_dir}/sidekiq.yml"
-		template "#{app_shared_config_dir}" do
+		template "#{shared_sidekiq_config_file}" do
 			source 'sidekiq.yml.erb'
 
 			mode '0644'
