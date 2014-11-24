@@ -1,6 +1,3 @@
-include_attribute 'deploy'include_recipe "opsworks_sidekiq::service"
-
-
 default[:sidekiq] = {}
 
 node[:deploy].each do |application, deploy|
