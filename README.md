@@ -1,6 +1,9 @@
 [opsworks_sidekiq](https://github.com/drakerlabs/opsworks_sidekiq)
 ====================
 
+Do not use. Instead, see https://github.com/drakerlabs/opsworks_sidekiq. This is a WIP.
+
+
 This cookbook sets up an [AWS OpsWorks](http://aws.amazon.com/opsworks/) instance to run [sidekiq](http://sidekiq.org/) for a Rails application.
 
 Adapted from Joey Aghion's [opsworks_delayed_job](https://github.com/joeyAghion/opsworks_delayed_job).
