@@ -1,5 +1,5 @@
-
 include_recipe 'deploy'
+include_recipe "opsworks_sidekiq::service"
 
 node[:deploy].each do |application, deploy|
 
