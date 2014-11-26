@@ -32,10 +32,12 @@ node[:deploy].each do |application, deploy|
 		next
 	end
 
-	app_shared_config_dir = "#{deploy['deploy_to']}/shared/config"
+	app_dir = "#{deploy['deploy_to']}/current"
+	app_config_dir = "#{app_dir}/config"
+	app_pids_dir   = "#{app_dir}/pids"
 
-	app_non_shared_config_dir = "#{deploy['deploy_to']}/config"
-	app_non_shared_pids_dir   = "#{app_shared_dir}/config"
+	app_shared_dir = "#{deploy['deploy_to']}/shared"
+	app_shared_config_dir = "#{app_shared_dir}/config"
 
 	user  = deploy[:user]
 	group = deploy[:group]
@@ -69,9 +71,9 @@ node[:deploy].each do |application, deploy|
 		# and start command on new workers (in particular, the pidfiles need to be different). Also, there is no real
 		# advantage to keeping these files in a shared directory.
 
-		# Make sure the non-shared PIDs directory exists since this doesn't normally get created
+		# Make sure the non-shared PIDs directory exists since this isn't a normal rails directory (non-shared pids)
 		#
-		directory app_non_shared_pids_dir do
+		directory app_pids_dir do
 			owner user
 			group group
 			mode 0770
@@ -101,7 +103,7 @@ node[:deploy].each do |application, deploy|
 			yaml = yaml.gsub(/^(\s*)([^:][^\s]*):/,'\1:\2:')
 
 			(options[:process_count] || 1).times do |n|
-				file "#{app_non_shared_config_dir}/sidekiq_#{worker}#{n+1}.yml" do
+				file "#{app_config_dir}/sidekiq_#{worker}#{n+1}.yml" do
 					owner user
 					group group
 					mode 0644
@@ -111,7 +113,7 @@ node[:deploy].each do |application, deploy|
 			end
 		end
 
-		sidekiq_monitrc_file = "#{app_non_shared_config_dir}/sidekiq_#{application}.monitrc}"
+		sidekiq_monitrc_file = "#{app_config_dir}/sidekiq_#{application}.monitrc}"
 		link "#{node[:monit][:conf_dir]}/sidekiq_#{application}.monitrc" do
 			to sidekiq_monitrc_file
 			mode 0644
