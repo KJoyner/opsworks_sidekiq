@@ -11,6 +11,19 @@
 include_recipe 'deploy'
 include_recipe "opsworks_sidekiq::service"
 
+# When we deploy a new app, we need to do the following:
+#   1) Send a STOP+TERM signal to the current monit configuration group
+#   2) Create and link to the new monit configuration group
+#   3) Reload monit
+#   4) Restart configuration group
+#
+# When rolling back to a previous app, we need to do the following:
+#	1) Send a STOP+TERM signal to the current monit configuration group
+#	2) Link to the previous monit configuration group
+#   3) Unlink the current monit configuration group
+# 	4) Reload monit
+#	5) Start the previous monit configuration group
+
 # setup sidekiq service per app
 node[:deploy].each do |application, deploy|
 
@@ -19,13 +32,24 @@ node[:deploy].each do |application, deploy|
 		next
 	end
 
-	app_shared_dir        = "#{deploy['deploy_to']}/shared"
-	app_shared_config_dir = "#{app_shared_dir}/config"
+	app_shared_config_dir = "#{deploy['deploy_to']}/shared/config"
+
+	app_non_shared_config_dir = "#{deploy['deploy_to']}/config"
+	app_non_shared_pids_dir   = "#{app_shared_dir}/config"
 
 	user  = deploy[:user]
 	group = deploy[:group]
 
 	if node[:sidekiq][application]
+
+		Chef::Log.debug("Stopping current Sidekiq workers for #{application}")
+		execute "stopping sidekiq workers for #{application}" do
+			command "sudo monit stop -g sidekiq_#{application}"
+		end
+
+		# Currently, the global sidekiq config is applicable to all versions of this app. It configures the client
+		# and the server with parameters applicable to all versions (e.g. redis endpoint).
+		#
 		template "#{app_shared_config_dir}/sidekiq.yml" do
 			source 'sidekiq.yml.erb'
 
@@ -38,6 +62,22 @@ node[:deploy].each do |application, deploy|
 			only_if do
 				File.directory?(app_shared_config_dir)
 			end
+		end
+
+		# The individual worker configuration files and the Monit configuration file which refers to these workers
+		# are created within the release directory. This enables us to overlap monit stop command on current workers
+		# and start command on new workers (in particular, the pidfiles need to be different). Also, there is no real
+		# advantage to keeping these files in a shared directory.
+
+		# Make sure the non-shared PIDs directory exists since this doesn't normally get created
+		#
+		directory app_non_shared_pids_dir do
+			owner user
+			group group
+			mode 0770
+
+			action :create
+			recursive true
 		end
 
 		workers = node[:sidekiq][application][:workers].to_hash.reject {|k,v| k.to_s =~ /restart_command|syslog/ }
@@ -61,7 +101,9 @@ node[:deploy].each do |application, deploy|
 			yaml = yaml.gsub(/^(\s*)([^:][^\s]*):/,'\1:\2:')
 
 			(options[:process_count] || 1).times do |n|
-				file "#{app_shared_config_dir}/sidekiq_#{worker}#{n+1}.yml" do
+				file "#{app_non_shared_config_dir}/sidekiq_#{worker}#{n+1}.yml" do
+					owner user
+					group group
 					mode 0644
 					action :create
 					content yaml
@@ -69,9 +111,20 @@ node[:deploy].each do |application, deploy|
 			end
 		end
 
-		template "#{node[:monit][:conf_dir]}/sidekiq_#{application}.monitrc" do
+		sidekiq_monitrc_file = "#{app_non_shared_config_dir}/sidekiq_#{application}.monitrc}"
+		link "#{node[:monit][:conf_dir]}/sidekiq_#{application}.monitrc" do
+			to sidekiq_monitrc_file
 			mode 0644
+		end
+
+		# create template after link so when we reload server, everything is good to go
+		template sidekiq_monitrc_file do
 			source "sidekiq_monitrc.erb"
+
+			owner user
+			group group
+			mode 0644
+
 			variables({
 						  :deploy => deploy,
 						  :application => application,
@@ -82,11 +135,7 @@ node[:deploy].each do |application, deploy|
 			notifies :reload, resources(service:  'monit'), :immediately
 		end
 
+
+		# TODO: Determine if we need to start sidekiq workers or if the reload will start them!
 	end
 end
-
-
-  # Chef::Log.debug("Restarting Sidekiq Workers: #{application}")
-  # execute "restart Rails app #{application}" do
-  #   command node[:sidekiq][application][:restart_command]
-  # end
