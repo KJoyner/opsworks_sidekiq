@@ -9,7 +9,7 @@ check process sidekiq_<%= identifier %>
   with pidfile <%= pid_file %>
   start program = "/bin/su - <%= @deploy[:user] %> -c 'cd <%= @deploy[:current_path] %> && RAILS_ENV=<%= @deploy[:rails_env] %> bundle exec sidekiq -C <%= conf_file %> -P  <%= pid_file %> <%= syslog %>'" with timeout 90 seconds
   stop  program = "/bin/su - <%= @deploy[:user] %> -c 'cd <%= @deploy[:current_path] %> && RAILS_ENV=<%= @deploy[:rails_env] %> bundle exec sidekiqctl stop <%= pid_file %> 61'" with timeout 60 seconds
-  group sidekiq_<%= @application %>_group
+  group sidekiq_<%= @application %>
 
   <% end %>
 <% end %>
