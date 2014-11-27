@@ -113,7 +113,7 @@ node[:deploy].each do |application, deploy|
 			end
 		end
 
-		sidekiq_monitrc_file = "#{app_config_dir}/sidekiq_#{application}.monitrc}"
+		sidekiq_monitrc_file = "#{app_config_dir}/sidekiq_#{application}.monitrc"
 		link "#{node[:monit][:conf_dir]}/sidekiq_#{application}.monitrc" do
 			to sidekiq_monitrc_file
 			mode 0644
@@ -128,10 +128,14 @@ node[:deploy].each do |application, deploy|
 			mode 0644
 
 			variables({
-						  :deploy => deploy,
-						  :application => application,
-						  :workers => workers,
-						  :syslog => node[:sidekiq][application][:syslog]
+						  user: user,
+						  application: application,
+						  rails_env: deploy['rails_env'],
+						  app_dir: app_dir,
+						  app_config_dir: app_config_dir,
+						  app_pids_dir: app_pids_dir,
+						  workers: workers,
+						  syslog: node[:sidekiq][application][:syslog]
 					  })
 
 			notifies :reload, resources(service:  'monit'), :immediately

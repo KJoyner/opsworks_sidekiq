@@ -1,15 +1,16 @@
 <% @workers.each do |worker, options| %>
-  <% (options[:process_count] || 1).times do |n| %>
-  <% identifier = "#{@application}-#{worker}#{n+1}" %>
-  <% conf_file = "#{@deploy[:deploy_to]}/shared/config/sidekiq_#{worker}#{n+1}.yml" %>
-  <% pid_file = "#{@deploy[:deploy_to]}/shared/pids/sidekiq_#{identifier}.pid" %>
-  <% syslog = @syslog ? "2>&1 | logger -t sidekiq-#{identifier}" : '' %>
+    <% (options[:process_count] || 1).times do |n| %>
 
-check process sidekiq_<%= identifier %>
-  with pidfile <%= pid_file %>
-  start program = "/bin/su - <%= @deploy[:user] %> -c 'cd <%= @deploy[:current_path] %> && RAILS_ENV=<%= @deploy[:rails_env] %> bundle exec sidekiq -C <%= conf_file %> -P  <%= pid_file %> <%= syslog %>'" with timeout 90 seconds
-  stop  program = "/bin/su - <%= @deploy[:user] %> -c 'cd <%= @deploy[:current_path] %> && RAILS_ENV=<%= @deploy[:rails_env] %> bundle exec sidekiqctl stop <%= pid_file %> 61'" with timeout 60 seconds
-  group sidekiq_<%= @application %>
+        <% identifier = "sidekiq_#{@application}-#{worker}#{n+1}" %>
+        <% conf_file  = "#{@app_config_dir}/sidekiq_#{worker}#{n+1}.yml" %>
+        <% pid_file   = "#{@app_pid_dir}/#{identifier}.pid" %>
+        <% syslog = @syslog ? "2>&1 | logger -t #{identifier}" : '' %>
 
-  <% end %>
+check process <%= identifier %>
+    with pidfile <%= pid_file %>
+    start program = "/bin/su - <%= @user %> -c 'cd <%= @app_dir %> && RAILS_ENV=<%= @rails_env %> bundle exec sidekiq -C <%= conf_file %> -P  <%= pid_file %> <%= syslog %>'" with timeout 90 seconds
+    stop  program = "/bin/su - <%= @user %> -c 'cd <%= @app_dir %> && RAILS_ENV=<%= @rails_env %> bundle exec sidekiqctl stop <%= pid_file %> 90'" with timeout 91 seconds
+    group sidekiq_<%= @application %>
+
+    <% end %>
 <% end %>
