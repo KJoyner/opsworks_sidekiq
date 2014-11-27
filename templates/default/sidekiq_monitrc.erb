@@ -3,7 +3,7 @@
 
         <% identifier = "sidekiq_#{@application}-#{worker}#{n+1}" %>
         <% conf_file  = "#{@app_config_dir}/sidekiq_#{worker}#{n+1}.yml" %>
-        <% pid_file   = "#{@app_pid_dir}/#{identifier}.pid" %>
+        <% pid_file   = "#{@app_pids_dir}/#{identifier}.pid" %>
         <% syslog = @syslog ? "2>&1 | logger -t #{identifier}" : '' %>
 
 check process <%= identifier %>
